@@ -1,7 +1,8 @@
 <?php
 
-test('the application returns a successful response', function () {
-    $response = $this->get('/');
+test('the api returns a successful response', function () {
+    $response = $this->getJson('/api/v1');
 
-    $response->assertStatus(200);
+    $response->assertOk()
+        ->assertJson(['test' => 'test']);
 });

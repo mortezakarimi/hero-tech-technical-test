@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\V1\AuthController;
+use App\Http\Controllers\V1\BookingController;
 use App\Http\Controllers\V1\EventController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,5 +21,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::get('me', [AuthController::class, 'me']);
+
+        Route::get('bookings', [BookingController::class, 'index']);
+        Route::get('bookings/{booking}', [BookingController::class, 'show']);
+        Route::post('bookings/{booking}/confirm', [BookingController::class, 'confirm']);
+        Route::delete('bookings/{booking}', [BookingController::class, 'destroy']);
+        Route::post('events/{event}/bookings', [BookingController::class, 'store']);
     });
 });

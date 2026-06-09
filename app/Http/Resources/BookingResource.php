@@ -21,6 +21,7 @@ class BookingResource extends JsonResource
             'event_id' => $this->event_id,
 
             'event' => new EventResource($this->whenLoaded('event')),
+            'payment' => new PaymentResource($this->whenLoaded('payment')),
         ];
     }
 }

@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\PaymentOutcome;
 use App\Models\Booking;
 use App\Models\Event;
+use App\Models\Payment;
 use App\Models\User;
 use App\Services\InMemoryEventSlotCounter;
 use Laravel\Sanctum\Sanctum;
@@ -51,6 +53,14 @@ describe('Concurrent Booking', function () {
                 'user_id' => $user->id,
                 'event_id' => $event->id,
             ]);
+
+            Payment::factory()->create([
+                'booking_id' => Booking::query()
+                    ->where('user_id', $user->id)
+                    ->where('event_id', $event->id)
+                    ->value('id'),
+                'expires_at' => now()->addMinutes(15),
+            ]);
         }
 
         $statusCodes = [];
@@ -63,7 +73,9 @@ describe('Concurrent Booking', function () {
 
             Sanctum::actingAs($user, ['*']);
 
-            $response = $this->postJson("/api/v1/bookings/{$booking->id}/confirm");
+            $response = $this->postJson("/api/v1/bookings/{$booking->id}/payment", [
+                'simulate' => PaymentOutcome::SUCCESS->value,
+            ]);
             $statusCodes[] = $response->status();
         }
 

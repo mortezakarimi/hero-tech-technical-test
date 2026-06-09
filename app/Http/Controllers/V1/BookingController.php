@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\V1;
 
 use App\DTOs\Booking\ListBookingsFilter;
+use App\DTOs\Payment\ProcessPaymentData;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProcessPaymentRequest;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Resources\BookingResource;
+use App\Http\Resources\PaymentResource;
 use App\Models\Booking;
 use App\Models\Event;
 use App\Services\BookingService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -18,6 +22,7 @@ class BookingController extends Controller
 {
     public function __construct(
         private readonly BookingService $bookingService,
+        private readonly PaymentService $paymentService,
     ) {}
 
     #[OA\Get(
@@ -98,8 +103,9 @@ class BookingController extends Controller
     public function store(StoreBookingRequest $request, Event $event): JsonResponse
     {
         $booking = $this->bookingService->create($request->user(), $event);
+        $this->paymentService->initiateForBooking($booking);
 
-        return (new BookingResource($booking))
+        return (new BookingResource($booking->load('payment')))
             ->response()
             ->setStatusCode(201);
     }
@@ -135,6 +141,55 @@ class BookingController extends Controller
     public function show(Request $request, Booking $booking): BookingResource
     {
         return new BookingResource($this->bookingService->find($request->user(), $booking));
+    }
+
+    #[OA\Post(
+        path: '/v1/bookings/{booking}/payment',
+        operationId: 'processBookingPayment',
+        description: 'Processes a fake payment for a pending booking. Success confirms the booking; failure cancels it.',
+        summary: 'Pay for a booking',
+        security: [['sanctum' => []]],
+        tags: ['bookings'],
+    )]
+    #[OA\Parameter(
+        name: 'booking',
+        description: 'Booking ID',
+        in: 'path',
+        required: true,
+        schema: new OA\Schema(type: 'integer', format: 'int64'),
+    )]
+    #[OA\RequestBody(
+        required: true,
+        content: new OA\JsonContent(
+            required: ['simulate'],
+            properties: [
+                new OA\Property(property: 'simulate', type: 'string', enum: ['success', 'failure'], example: 'success'),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 200,
+        description: 'Payment processed successfully',
+        content: new OA\JsonContent(
+            required: ['data'],
+            properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/Payment'),
+            ]
+        )
+    )]
+    #[OA\Response(response: 401, description: 'Unauthenticated')]
+    #[OA\Response(response: 403, description: 'Forbidden')]
+    #[OA\Response(response: 409, description: 'Payment already processed')]
+    #[OA\Response(response: 422, description: 'Payment expired')]
+    public function pay(ProcessPaymentRequest $request, Booking $booking): PaymentResource
+    {
+        $payment = $this->paymentService->process(
+            $request->user(),
+            $booking,
+            ProcessPaymentData::fromValidated($request->validated()),
+        );
+
+        return new PaymentResource($payment);
     }
 
     #[OA\Post(

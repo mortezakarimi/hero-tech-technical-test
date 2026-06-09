@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\BookingStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Booking;
 use App\Models\Event;
 use App\Models\User;
@@ -37,6 +38,10 @@ describe('Create Booking', function () {
             'user_id' => $this->user->id,
             'event_id' => $this->event->id,
             'status' => BookingStatus::PENDING->value,
+        ]);
+
+        $this->assertDatabaseHas('payments', [
+            'status' => PaymentStatus::PENDING->value,
         ]);
 
         expect(app(EventSlotCounterInterface::class)->getRemainingSlots($this->event->id))->toBe(9);

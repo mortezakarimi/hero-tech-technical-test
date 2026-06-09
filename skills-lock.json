@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "laravel-tdd": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/laravel-tdd/SKILL.md",
+      "computedHash": "52144f9135ad863587826b13be40b53317909b5df0c76d85c361d88ac0dd10c6"
+    },
+    "tdd": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/tdd/SKILL.md",
+      "computedHash": "15a7b5e36383ebadb2dec5e586679e55e9663d292da418926b8da6fc0ef27d84"
+    }
+  }
+}

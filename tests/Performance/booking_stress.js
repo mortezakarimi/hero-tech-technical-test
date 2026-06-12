@@ -6,6 +6,7 @@
  *
  * Optional env:
  *   EVENT_COUNT=5 HOT_EVENT_CAPACITY=10 CONCURRENT_VUS=30 SETUP_EVENT_CAPACITY=50
+ *   ADMIN_EMAIL=admin@example.com ADMIN_PASSWORD=password
  *
  * Note: register/login are throttled (6/min). Staggered scenarios reduce 429s.
  * For heavy registration load, temporarily raise throttle limits in routes/api.php.
@@ -17,6 +18,8 @@ import exec from 'k6/execution';
 import { randomItem } from 'https://jslib.k6.io/k6-utils/1.2.0/index.js';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost';
+const ADMIN_EMAIL = __ENV.ADMIN_EMAIL || 'admin@example.com';
+const ADMIN_PASSWORD = __ENV.ADMIN_PASSWORD || 'password';
 let cachedSetup = null;
 const EVENT_COUNT = Number(__ENV.EVENT_COUNT || 5);
 const HOT_EVENT_CAPACITY = Number(__ENV.HOT_EVENT_CAPACITY || 10);
@@ -112,7 +115,25 @@ function futureEventWindow(daysAhead, durationHours = 2) {
     return { start, end };
 }
 
-function createEvent(title, capacity, daysAhead) {
+function loginAdmin() {
+    const response = http.post(
+        `${BASE_URL}/api/v1/login`,
+        JSON.stringify({
+            email: ADMIN_EMAIL,
+            password: ADMIN_PASSWORD,
+            device_name: 'k6-setup',
+        }),
+        jsonHeaders(),
+    );
+
+    if (response.status !== 200) {
+        return null;
+    }
+
+    return JSON.parse(response.body).token;
+}
+
+function createEvent(title, capacity, daysAhead, token) {
     const { start, end } = futureEventWindow(daysAhead);
 
     const response = http.post(
@@ -124,7 +145,7 @@ function createEvent(title, capacity, daysAhead) {
             start_time: formatDateTime(start),
             end_time: formatDateTime(end),
         }),
-        jsonHeaders(),
+        jsonHeaders(token),
     );
 
     if (response.status !== 201) {
@@ -193,10 +214,16 @@ function processPayment(token, bookingId, outcome) {
 }
 
 export function setup() {
+    const adminToken = loginAdmin();
+
+    if (! adminToken) {
+        throw new Error('Failed to login as admin for event setup. Seed admin@example.com or set ADMIN_EMAIL/ADMIN_PASSWORD.');
+    }
+
     const events = [];
 
     for (let index = 0; index < EVENT_COUNT; index++) {
-        const event = createEvent(`K6 Pool Event ${index + 1}`, SETUP_EVENT_CAPACITY, index + 2);
+        const event = createEvent(`K6 Pool Event ${index + 1}`, SETUP_EVENT_CAPACITY, index + 2, adminToken);
 
         if (event) {
             events.push(event);
@@ -205,7 +232,7 @@ export function setup() {
         sleep(0.05);
     }
 
-    const hotEvent = createEvent('K6 Hot Event (Concurrent)', HOT_EVENT_CAPACITY, 1);
+    const hotEvent = createEvent('K6 Hot Event (Concurrent)', HOT_EVENT_CAPACITY, 1, adminToken);
 
     if (! hotEvent) {
         throw new Error('Failed to create hot event for concurrent booking scenario');

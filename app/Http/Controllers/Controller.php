@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use OpenApi\Attributes as OA;
 
 #[OA\OpenApi(openapi: OA\OpenApi::VERSION_3_1_0, security: [['sanctum' => []]])]
 #[OA\Info(
     version: '1.0.0',
-    title: 'Basic single file API',
+    title: 'HeroTech Event Booking API',
+    description: 'Versioned REST API for event management and concurrent booking.',
     attachables: [new OA\Attachable]
 )]
 #[OA\License(name: 'MIT', identifier: 'MIT')]
@@ -15,9 +17,8 @@ use OpenApi\Attributes as OA;
 #[OA\SecurityScheme(securityScheme: 'sanctum', type: 'http', description: 'Sanctum bearer token', bearerFormat: 'JWT', scheme: 'bearer')]
 #[OA\Tag(name: 'auth', description: 'Authentication endpoints')]
 #[OA\Tag(name: 'events', description: 'Event management endpoints')]
-#[OA\Tag(name: 'products', description: 'All about products')]
-#[OA\Tag(name: 'catalog', description: 'Catalog API')]
+#[OA\Tag(name: 'bookings', description: 'Booking and payment endpoints')]
 abstract class Controller
 {
-    //
+    use AuthorizesRequests;
 }

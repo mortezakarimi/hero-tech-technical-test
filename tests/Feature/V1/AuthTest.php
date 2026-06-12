@@ -121,7 +121,11 @@ it('denies non-admin users via admin middleware', function () {
     Sanctum::actingAs($user, ['*']);
 
     $this->getJson('/api/v1/_test/admin')
-        ->assertForbidden();
+        ->assertForbidden()
+        ->assertJson([
+            'message' => 'This action is unauthorized.',
+        ])
+        ->assertJsonMissing(['exception', 'trace']);
 });
 
 it('allows admin users via admin middleware', function () {

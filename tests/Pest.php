@@ -1,8 +1,10 @@
 <?php
 
 use App\Models\Event;
+use App\Models\User;
 use App\Services\Contracts\EventSlotCounterInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /*
@@ -50,4 +52,12 @@ function seedEventSlots(Event $event, ?int $capacity = null): void
 {
     $slotCounter = app(EventSlotCounterInterface::class);
     $slotCounter->seedSlots($event->id, $capacity ?? $event->total_capacity);
+}
+
+function actingAsAdmin(): User
+{
+    $admin = User::factory()->admin()->create();
+    Sanctum::actingAs($admin, ['*']);
+
+    return $admin;
 }

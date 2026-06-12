@@ -146,7 +146,6 @@ class EventController extends Controller
         operationId: 'createEvent',
         description: 'Creates a new event. Validates required fields, future start time, end after start, and prevents scheduling conflicts with existing events.',
         summary: 'Create an event',
-        security: [],
         tags: ['events'],
     )]
     #[OA\RequestBody(
@@ -163,11 +162,27 @@ class EventController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 422, description: 'Validation error (invalid fields or scheduling conflict)')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — admin role required',
+        content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenError')
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error (invalid fields or scheduling conflict)',
+        content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')
+    )]
     public function store(EventRequest $request): JsonResponse
     {
+        $this->authorize('create', Event::class);
+
         $event = $this->eventService->create(
-            CreateEventData::fromValidated($request->validated()),
+            CreateEventData::fromValidated($request->validated(), $request->user()->id),
         );
 
         return (new EventResource($event))
@@ -200,7 +215,11 @@ class EventController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 404, description: 'Event not found')]
+    #[OA\Response(
+        response: 404,
+        description: 'Event not found or soft-deleted',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
     public function show(Event $event): EventResource
     {
         return new EventResource($this->eventService->find($event));
@@ -211,7 +230,6 @@ class EventController extends Controller
         operationId: 'updateEvent',
         description: 'Updates an existing event. Validates scheduling conflicts and capacity against confirmed bookings.',
         summary: 'Update an event',
-        security: [],
         tags: ['events'],
     )]
     #[OA\Parameter(
@@ -235,10 +253,30 @@ class EventController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 404, description: 'Event not found')]
-    #[OA\Response(response: 422, description: 'Validation error (invalid fields or scheduling conflict)')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — only the admin who created the event may update it',
+        content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenError')
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Event not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error (invalid fields, scheduling conflict, or capacity below confirmed bookings)',
+        content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')
+    )]
     public function update(EventRequest $request, Event $event): EventResource
     {
+        $this->authorize('update', $event);
+
         $updatedEvent = $this->eventService->update(
             $event,
             UpdateEventData::fromValidated($request->validated()),
@@ -252,7 +290,6 @@ class EventController extends Controller
         operationId: 'deleteEvent',
         description: 'Deletes an event. Cannot delete events with active confirmed bookings.',
         summary: 'Delete an event',
-        security: [],
         tags: ['events'],
     )]
     #[OA\Parameter(
@@ -263,10 +300,24 @@ class EventController extends Controller
         schema: new OA\Schema(type: 'integer', format: 'int64'),
     )]
     #[OA\Response(response: 204, description: 'Event deleted successfully')]
-    #[OA\Response(response: 404, description: 'Event not found')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — only the admin who created the event may delete it',
+        content: new OA\JsonContent(ref: '#/components/schemas/ForbiddenError')
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Event not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
     #[OA\Response(
         response: 409,
-        description: 'Cannot delete event with active bookings',
+        description: 'Cannot delete event with active confirmed bookings',
         content: new OA\JsonContent(
             required: ['message'],
             properties: [
@@ -280,6 +331,8 @@ class EventController extends Controller
     )]
     public function destroy(Event $event): JsonResponse|Response
     {
+        $this->authorize('delete', $event);
+
         $this->eventService->delete($event);
 
         return response()->noContent();

@@ -42,8 +42,16 @@ class AuthController extends Controller
         description: 'User registered successfully',
         content: new OA\JsonContent(ref: '#/components/schemas/AuthTokenResponse')
     )]
-    #[OA\Response(response: 422, description: 'Validation error')]
-    #[OA\Response(response: 429, description: 'Too many requests')]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error',
+        content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')
+    )]
+    #[OA\Response(
+        response: 429,
+        description: 'Too many requests (throttled at 6 per minute)',
+        content: new OA\JsonContent(ref: '#/components/schemas/TooManyRequestsError')
+    )]
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::create([
@@ -78,8 +86,16 @@ class AuthController extends Controller
         description: 'Login successful',
         content: new OA\JsonContent(ref: '#/components/schemas/AuthTokenResponse')
     )]
-    #[OA\Response(response: 422, description: 'Invalid credentials or validation error')]
-    #[OA\Response(response: 429, description: 'Too many requests')]
+    #[OA\Response(
+        response: 422,
+        description: 'Invalid credentials or validation error',
+        content: new OA\JsonContent(ref: '#/components/schemas/ValidationError')
+    )]
+    #[OA\Response(
+        response: 429,
+        description: 'Too many requests (throttled at 6 per minute)',
+        content: new OA\JsonContent(ref: '#/components/schemas/TooManyRequestsError')
+    )]
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::where('email', $request->validated('email'))->first();
@@ -106,7 +122,11 @@ class AuthController extends Controller
         tags: ['auth'],
     )]
     #[OA\Response(response: 204, description: 'Token revoked successfully')]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
     public function logout(Request $request): Response
     {
         $request->user()->currentAccessToken()->delete();
@@ -131,7 +151,11 @@ class AuthController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
     public function me(Request $request): UserResource
     {
         return new UserResource($request->user());

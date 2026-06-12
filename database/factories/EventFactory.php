@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Event;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Carbon;
 
@@ -16,6 +17,7 @@ class EventFactory extends Factory
         $totalCapacity = $this->faker->numberBetween(1, 10000);
 
         return [
+            'user_id' => User::factory()->admin(),
             'title' => $this->faker->word(),
             'description' => $this->faker->text(),
             'total_capacity' => $totalCapacity,

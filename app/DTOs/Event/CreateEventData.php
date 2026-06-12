@@ -7,6 +7,7 @@ use Illuminate\Support\Carbon;
 readonly class CreateEventData
 {
     public function __construct(
+        public int $userId,
         public string $title,
         public ?string $description,
         public int $totalCapacity,
@@ -17,9 +18,10 @@ readonly class CreateEventData
     /**
      * @param  array<string, mixed>  $validated
      */
-    public static function fromValidated(array $validated): self
+    public static function fromValidated(array $validated, int $userId): self
     {
         return new self(
+            userId: $userId,
             title: $validated['title'],
             description: $validated['description'] ?? null,
             totalCapacity: (int) $validated['total_capacity'],
@@ -34,6 +36,7 @@ readonly class CreateEventData
     public function toArray(): array
     {
         return [
+            'user_id' => $this->userId,
             'title' => $this->title,
             'description' => $this->description,
             'total_capacity' => $this->totalCapacity,

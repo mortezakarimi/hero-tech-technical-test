@@ -58,10 +58,34 @@ class BookingController extends Controller
                     type: 'array',
                     items: new OA\Items(ref: '#/components/schemas/Booking'),
                 ),
+                new OA\Property(
+                    property: 'links',
+                    properties: [
+                        new OA\Property(property: 'first', type: 'string'),
+                        new OA\Property(property: 'last', type: 'string'),
+                        new OA\Property(property: 'prev', type: 'string', nullable: true),
+                        new OA\Property(property: 'next', type: 'string', nullable: true),
+                    ],
+                    type: 'object',
+                ),
+                new OA\Property(
+                    property: 'meta',
+                    properties: [
+                        new OA\Property(property: 'current_page', type: 'integer'),
+                        new OA\Property(property: 'last_page', type: 'integer'),
+                        new OA\Property(property: 'per_page', type: 'integer'),
+                        new OA\Property(property: 'total', type: 'integer'),
+                    ],
+                    type: 'object',
+                ),
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
     public function index(Request $request): JsonResponse
     {
         $bookings = $this->bookingService->list(
@@ -96,10 +120,40 @@ class BookingController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
-    #[OA\Response(response: 404, description: 'Event not found')]
-    #[OA\Response(response: 409, description: 'Duplicate active booking')]
-    #[OA\Response(response: 422, description: 'Event is full')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Event not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'User already has an active booking for this event',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'You already have an active booking for this event.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Event is full (no remaining slots)',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(property: 'message', type: 'string', example: 'Event is full.'),
+            ]
+        )
+    )]
     public function store(StoreBookingRequest $request, Event $event): JsonResponse
     {
         $booking = $this->bookingService->create($request->user(), $event);
@@ -135,9 +189,30 @@ class BookingController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
-    #[OA\Response(response: 403, description: 'Forbidden')]
-    #[OA\Response(response: 404, description: 'Booking not found')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — booking belongs to another user',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'You are not authorized to view this booking.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Booking not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
     public function show(Request $request, Booking $booking): BookingResource
     {
         return new BookingResource($this->bookingService->find($request->user(), $booking));
@@ -177,10 +252,72 @@ class BookingController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
-    #[OA\Response(response: 403, description: 'Forbidden')]
-    #[OA\Response(response: 409, description: 'Payment already processed')]
-    #[OA\Response(response: 422, description: 'Payment expired')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — booking belongs to another user',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'You are not authorized to pay for this booking.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Booking or payment not found',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'No payment found for this booking.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Payment has already been processed',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'Payment has already been processed.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 422,
+        description: 'Validation error or payment window expired',
+        content: new OA\JsonContent(
+            oneOf: [
+                new OA\Schema(ref: '#/components/schemas/ValidationError'),
+                new OA\Schema(
+                    required: ['message'],
+                    properties: [
+                        new OA\Property(
+                            property: 'message',
+                            type: 'string',
+                            example: 'Payment window has expired. Booking has been cancelled.',
+                        ),
+                    ]
+                ),
+            ]
+        )
+    )]
     public function pay(ProcessPaymentRequest $request, Booking $booking): PaymentResource
     {
         $payment = $this->paymentService->process(
@@ -217,9 +354,58 @@ class BookingController extends Controller
             ]
         )
     )]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
-    #[OA\Response(response: 403, description: 'Forbidden')]
-    #[OA\Response(response: 409, description: 'Booking cannot be confirmed')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — booking belongs to another user',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'You are not authorized to confirm this booking.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Booking not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Booking cannot be confirmed (not pending or event is full)',
+        content: new OA\JsonContent(
+            oneOf: [
+                new OA\Schema(
+                    required: ['message'],
+                    properties: [
+                        new OA\Property(
+                            property: 'message',
+                            type: 'string',
+                            example: 'Only pending bookings can be confirmed.',
+                        ),
+                    ]
+                ),
+                new OA\Schema(
+                    required: ['message'],
+                    properties: [
+                        new OA\Property(
+                            property: 'message',
+                            type: 'string',
+                            example: 'Event is full.',
+                        ),
+                    ]
+                ),
+            ]
+        )
+    )]
     public function confirm(Request $request, Booking $booking): BookingResource
     {
         return new BookingResource($this->bookingService->confirm($request->user(), $booking));
@@ -241,9 +427,44 @@ class BookingController extends Controller
         schema: new OA\Schema(type: 'integer', format: 'int64'),
     )]
     #[OA\Response(response: 204, description: 'Booking cancelled successfully')]
-    #[OA\Response(response: 401, description: 'Unauthenticated')]
-    #[OA\Response(response: 403, description: 'Forbidden')]
-    #[OA\Response(response: 409, description: 'Booking already cancelled')]
+    #[OA\Response(
+        response: 401,
+        description: 'Unauthenticated',
+        content: new OA\JsonContent(ref: '#/components/schemas/UnauthorizedError')
+    )]
+    #[OA\Response(
+        response: 403,
+        description: 'Forbidden — booking belongs to another user',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'You are not authorized to cancel this booking.',
+                ),
+            ]
+        )
+    )]
+    #[OA\Response(
+        response: 404,
+        description: 'Booking not found',
+        content: new OA\JsonContent(ref: '#/components/schemas/NotFoundError')
+    )]
+    #[OA\Response(
+        response: 409,
+        description: 'Booking is already cancelled',
+        content: new OA\JsonContent(
+            required: ['message'],
+            properties: [
+                new OA\Property(
+                    property: 'message',
+                    type: 'string',
+                    example: 'Booking is already cancelled.',
+                ),
+            ]
+        )
+    )]
     public function destroy(Request $request, Booking $booking): JsonResponse|Response
     {
         $this->bookingService->cancel($request->user(), $booking);

@@ -7,7 +7,9 @@ use App\Models\Event;
 describe('Update Event Edge Cases', function () {
 
     beforeEach(function () {
-        $this->event = Event::factory()->create([
+        $this->admin = actingAsAdmin();
+
+        $this->event = Event::factory()->for($this->admin)->create([
             'title' => 'Original Title',
             'total_capacity' => 100,
             'available_slots' => 100,

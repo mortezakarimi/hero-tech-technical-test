@@ -3,6 +3,10 @@
 use App\Models\Event;
 use Illuminate\Support\Carbon;
 
+beforeEach(function () {
+    $this->admin = actingAsAdmin();
+});
+
 describe('Event Basic Validation', function () {
 
     test('it creates an event with valid data', function () {

@@ -166,8 +166,8 @@ Roles are defined in [`app/Enums/UserRole.php`](app/Enums/UserRole.php):
 
 | Role | Value | Purpose |
 |------|-------|---------|
-| **User** | `user` | Default role on register; can book events and manage own bookings |
-| **Admin** | `admin` | Reserved role with `EnsureUserIsAdmin` middleware; not enforced on event routes today (events are public CRUD) |
+| **User** | `user` | Default role on register; can browse events, book events, and manage own bookings |
+| **Admin** | `admin` | Can create events; can only update or delete events they created |
 
 ### Authentication Flow
 
@@ -182,9 +182,11 @@ Register and login are throttled at 6 requests per minute.
 
 ## Application Flow
 
-### Events (public)
+### Events
 
-Event listing, creation, retrieval, update, and deletion are available without authentication.
+- **Browse (public):** Anyone can list and view events (`GET /events`, `GET /events/{event}`).
+- **Create (admin only):** Authenticated admins can create events (`POST /events`).
+- **Update / delete (owner admin only):** Only the admin who created an event may update or delete it (`PUT`, `DELETE`).
 
 ### Booking Lifecycle (authenticated)
 
@@ -236,10 +238,10 @@ All routes are prefixed with `/api/v1`.
 | Method | Endpoint | Auth |
 |--------|----------|------|
 | GET | `/events` | Public |
-| POST | `/events` | Public |
 | GET | `/events/{event}` | Public |
-| PUT | `/events/{event}` | Public |
-| DELETE | `/events/{event}` | Public |
+| POST | `/events` | Sanctum + admin |
+| PUT | `/events/{event}` | Sanctum + admin (owner only) |
+| DELETE | `/events/{event}` | Sanctum + admin (owner only) |
 
 **Bookings**
 

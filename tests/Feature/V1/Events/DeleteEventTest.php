@@ -6,8 +6,12 @@ use App\Models\Event;
 
 describe('Delete Event Edge Cases', function () {
 
+    beforeEach(function () {
+        $this->admin = actingAsAdmin();
+    });
+
     test('it can delete an event with no bookings', function () {
-        $event = Event::factory()->create();
+        $event = Event::factory()->for($this->admin)->create();
 
         $this->deleteJson("/api/v1/events/{$event->id}")->assertStatus(204);
 
@@ -15,7 +19,7 @@ describe('Delete Event Edge Cases', function () {
     });
 
     test('it cannot delete an event that has active confirmed bookings', function () {
-        $event = Event::factory()->create();
+        $event = Event::factory()->for($this->admin)->create();
 
         Booking::factory()->create([
             'event_id' => $event->id,
@@ -30,11 +34,12 @@ describe('Delete Event Edge Cases', function () {
     });
 
     test('it returns 404 when deleting a non-existent event', function () {
-        $this->deleteJson('/api/v1/events/9999')->assertStatus(404);
+        $this->deleteJson('/api/v1/events/9999')
+            ->assertStatus(404);
     });
 
     test('it can delete an event with only pending bookings', function () {
-        $event = Event::factory()->create();
+        $event = Event::factory()->for($this->admin)->create();
 
         Booking::factory()->create([
             'event_id' => $event->id,
@@ -47,7 +52,7 @@ describe('Delete Event Edge Cases', function () {
     });
 
     test('it can delete an event if all bookings are cancelled', function () {
-        $event = Event::factory()->create();
+        $event = Event::factory()->for($this->admin)->create();
 
         Booking::factory()->create([
             'event_id' => $event->id,
